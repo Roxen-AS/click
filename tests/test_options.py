@@ -1179,6 +1179,59 @@ def test_missing_envvar(runner):
     assert result.exit_code == 2
     assert "Error: Missing option '--foo'." in result.output
 
+    cli = click.Command(
+        "cli",
+        params=[click.Option(["--foo"], show_envvar=True, required=True)],
+        context_settings={"auto_envvar_prefix": "MYAPP"},
+    )
+    result = runner.invoke(cli)
+    assert result.exit_code == 2
+    assert "Error: Missing option '--foo' (env var: 'MYAPP_FOO')." in result.output
+
+    cli = click.Command(
+        "cli",
+        params=[
+            click.Option(
+                ["--foo"],
+                show_envvar=True,
+                required=True,
+                allow_from_autoenv=False,
+            )
+        ],
+        context_settings={"auto_envvar_prefix": "MYAPP"},
+    )
+    result = runner.invoke(cli)
+    assert result.exit_code == 2
+    assert "Error: Missing option '--foo'." in result.output
+
+    cli = click.Command(
+        "cli",
+        params=[
+            click.Option(
+                ["--foo"],
+                envvar="CUSTOM_VAR",
+                show_envvar=True,
+                required=True,
+            )
+        ],
+        context_settings={"auto_envvar_prefix": "MYAPP"},
+    )
+    result = runner.invoke(cli)
+    assert result.exit_code == 2
+    assert "Error: Missing option '--foo' (env var: 'CUSTOM_VAR')." in result.output
+
+    cli = click.Command(
+        "cli",
+        params=[click.Option(["--port"], type=int, show_envvar=True)],
+        context_settings={"auto_envvar_prefix": "MYAPP"},
+    )
+    result = runner.invoke(cli, ["--port", "not-an-int"])
+    assert result.exit_code == 2
+    assert (
+        "Error: Invalid value for '--port' (env var: 'MYAPP_PORT'):"
+        " 'not-an-int' is not a valid integer." in result.output
+    )
+
 
 @pytest.mark.parametrize(
     ("envvar", "expected"),
